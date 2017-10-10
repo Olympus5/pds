@@ -4,7 +4,7 @@ open ASD
 
 let () =
   (* Use with a manually made AST *)
-  let ast = Document([Sujet ((Entite "Test"), [Predicat ((Entite "Adrien"), [Objet "Je suis texte"])])])
+  let ast = Document([Sujet ((Entite "Test"), [Predicat ((Entite "Adrien"), [ObjetTexte "Je suis texte"])])])
   in print_endline (ASD.ntriples_of_ast ast);;
 
   (* Use with lexer and parser *)
