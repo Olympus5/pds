@@ -21,8 +21,8 @@ setup.log
 /.metadata/
 
 #gradle
-/gradle*
 *.gradle
+/gradle*
 
 # Compiled class file
 *.class
