@@ -16,7 +16,7 @@ public class SymbolTable {
     String ident; // minimum, used in the storage map
   }
 
-  public static class VariableSymbol {
+  public static class VariableSymbol extends Symbol {
     ASD.Type type;
     String ident;
 
@@ -26,11 +26,18 @@ public class SymbolTable {
     }
   }
 
-  public static class FunctionSymbol {
+  public static class FunctionSymbol extends Symbol {
     ASD.Type returnType;
     String ident;
     SymbolTable arguments; // Its argument can be viewed as a symbol table
     boolean defined; // false if declared but not defined
+
+    FunctionSymbol(ASD.Type returnType, String ident, SymbolTable arguments, boolean defined) {
+      this.returnType = returnType;
+      this.ident = ident;
+      this.arguments = arguments;
+      this.defined = defined;
+    }
   }
 
   // Store the table as a map
@@ -40,39 +47,40 @@ public class SymbolTable {
 
   // Construct a new symbol table
   public SymbolTable() {
-    table = new HashMap<String, Symbol>();
+    this.table = new HashMap<String, Symbol>();
+    this.parent = null;
   }
 
   // Construct a new symbol table with a parent
   public SymbolTable(SymbolTable parent) {
-    table = new HashMap<String, Symbol>();
-    parent = parent;
+    this.table = new HashMap<String, Symbol>();
+    this.parent = parent;
   }
 
   // Add a new symbol
   // Returns false if the symbol cannot be added (already in the scope)
   public boolean add(Symbol sym) {
-    Symbol res = table.get(sym.ident);
+    Symbol res = this.table.get(sym.ident);
     if(res != null) {
       return false;
     }
 
-    table.put(sym.ident, sym);
+    this.table.put(sym.ident, sym);
     return true;
   }
 
   // Remove a symbol
   // Returns false if the symbol is not in the table (without looking at parent's)
   public boolean remove(String ident) {
-    return table.remove(ident) != null;
+    return this.table.remove(ident) != null;
   }
 
   public Symbol lookup(String ident) {
-    Symbol res = table.get(ident);
+    Symbol res = this.table.get(ident);
 
-    if((res == null) && (parent != null)) {
+    if((res == null) && (this.parent != null)) {
       // Forward request
-      return parent.lookup(ident);
+      return this.parent.lookup(ident);
     }
 
     return res; // Either the symbol or null
