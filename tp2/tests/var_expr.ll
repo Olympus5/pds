@@ -8,8 +8,11 @@ declare i32 @printf(i8* noalias nocapture, ...)
 
 
 define i32 @main() {
-%tmp1 = add i32 1, 6
-%tmp2 = add i32 4, %tmp1
+%test = alloca i32
+%pipi = alloca i32,i32 19
+%lol = alloca i32
+%tmp1 = mul i32 3, 4
+%tmp2 = add i32 %tmp1, 17
 ret i32 %tmp2
 }
 

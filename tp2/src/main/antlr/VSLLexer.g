@@ -25,7 +25,11 @@ PLUS	: '+';
 MINUS	: '-';
 TIMES	: '*';
 DIV	: '/';
-
+AFF	: ':=';
+INT : 'INT';
+LB : '['; //left bracket
+RB : ']';
+COMMA : ',';
 // TODO : other keywords
 
 // other tokens (no conflict with keywords in VSL)

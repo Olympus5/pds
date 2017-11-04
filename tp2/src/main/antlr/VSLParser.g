@@ -16,7 +16,15 @@ options {
 // TODO : other rules
 
 program returns [ASD.Program out]
-    : e=expression { $out = new ASD.Program($e.out); } // TODO : change when you extend the language
+    : e=expression { $out = new ASD.Program($e.out); }
+    | v=variable e=expression { $out = new ASD.Program($v.out, $e.out); }// TODO : change when you extend the language
+    ;
+
+variable returns [List<ASD.Variable> out]
+    : INT { $out = new ArrayList<ASD.Variable>(); } (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
+                                                    | IDENT LB INTEGER RB { $out.add(new ASD.TabVariable($IDENT.text, $INTEGER.int)); })
+                                                    (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
+                                                    | COMMA IDENT LB INTEGER RB { $out.add(new ASD.TabVariable($IDENT.text, $INTEGER.int)); })*
     ;
 
 expression returns [ASD.Expression out]
@@ -35,5 +43,9 @@ factor returns [ASD.Expression out]
 
 primary returns [ASD.Expression out]
     : INTEGER { $out = new ASD.IntegerExpression($INTEGER.int); }
+    | LP e=expression RP { $out = $e.out; }
     // TODO : that's all?
     ;
+/*instruction returns [ASD.Instruction out]
+	: IDENT AFF e=expression { $out = new ASD.AffInstruction($e.out); }
+	;*/

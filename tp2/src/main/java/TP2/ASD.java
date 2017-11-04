@@ -3,18 +3,42 @@ package TP2;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import java.util.Iterator;
 
 public class ASD {
   static public class Program {
     Expression e; // What a program contains. TODO : change when you extend the language
+    List<Variable> v;
 
     public Program(Expression e) {
       this.e = e;
     }
 
+    public Program(List<Variable> v, Expression e) {
+      this.v = v;
+      this.e = e;
+    }
+
     // Pretty-printer
     public String pp() {
-      return e.pp();
+      String ret = "";
+
+      if(v != null) {
+        if(!v.isEmpty()) {
+          Iterator<Variable> it = v.iterator();
+          ret = "INT " + it.next().pp();
+
+          while(it.hasNext()) {
+            ret += ", " + it.next().pp();
+          }
+
+          ret += "\n";
+        }
+      }
+
+      ret += e.pp();
+
+      return ret;
     }
 
     // IR generation
@@ -23,9 +47,27 @@ public class ASD {
 
       // computes the IR of the expression
       Expression.RetExpression retExpr = e.toIR();
+
       // add a return instruction
       Llvm.Instruction ret = new Llvm.Return(retExpr.type.toLlvmType(), retExpr.result);
+
       retExpr.ir.appendCode(ret);
+
+      if(v != null) {
+        if(!v.isEmpty()) {
+          Iterator<Variable> it = v.iterator();
+          // computes the IR of the variable
+          Variable.RetVariable retVar = it.next().toIR();
+
+          while(it.hasNext()) {
+            retVar.ir.append(it.next().toIR().ir);
+          }
+          // add expression
+          retVar.ir.append(retExpr.ir);
+
+          return retVar.ir;
+        }
+      }
 
       return retExpr.ir;
     }
@@ -99,7 +141,7 @@ public class ASD {
       return new RetExpression(leftRet.ir, leftRet.type, result);
     }
   }
-  
+
   // Concrete class for Expression: sub case
   static public class SubExpression extends Expression {
     Expression left;
@@ -133,7 +175,7 @@ public class ASD {
       String result = Utils.newtmp();
 
       // new sub instruction result = left - right
-      Llvm.Instruction sub = new Llvm.Add(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+      Llvm.Instruction sub = new Llvm.Sub(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
       // append this instruction
       leftRet.ir.appendCode(sub);
@@ -143,7 +185,7 @@ public class ASD {
       return new RetExpression(leftRet.ir, leftRet.type, result);
     }
   }
-  
+
   // Concrete class for Expression: mul case
   static public class MulExpression extends Expression {
     Expression left;
@@ -177,7 +219,7 @@ public class ASD {
       String result = Utils.newtmp();
 
       // new mul instruction result = left * right
-      Llvm.Instruction mul = new Llvm.Add(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+      Llvm.Instruction mul = new Llvm.Mul(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
       // append this instruction
       leftRet.ir.appendCode(mul);
@@ -187,7 +229,7 @@ public class ASD {
       return new RetExpression(leftRet.ir, leftRet.type, result);
     }
   }
-  
+
 //Concrete class for Expression: udiv case
  static public class DivExpression extends Expression {
    Expression left;
@@ -221,7 +263,7 @@ public class ASD {
      String result = Utils.newtmp();
 
      // new div instruction result = left / right
-     Llvm.Instruction div = new Llvm.Add(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+     Llvm.Instruction div = new Llvm.Div(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
      // append this instruction
      leftRet.ir.appendCode(div);
@@ -249,6 +291,112 @@ public class ASD {
       return new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "" + value);
     }
   }
+
+  static public abstract class Variable {
+    public abstract String pp();
+    public abstract RetVariable toIR() throws TypeException;
+
+    static public class RetVariable {
+      //The LLVM IR:
+      public Llvm.IR ir;
+      //And additional stuff
+      public Type type; // The type of the variable
+      public String result; // The name containing the expression's result
+      // (either an identifier, or an immediate value)
+
+      public RetVariable(Llvm.IR ir, Type type, String result) {
+        this.ir = ir;
+        this.type = type;
+        this.result = result;
+      }
+    }
+  }
+
+  // Concrete class for Variable: integer variable case
+  static public class IntegerVariable extends Variable {
+    String name;
+
+    public IntegerVariable(String name) {
+      this.name = name;
+    }
+
+    public String pp() {
+      return this.name;
+    }
+
+    public RetVariable toIR() {
+      String result = "%" + name;
+
+      Llvm.Instruction varInt = new Llvm.VarInt((new IntType()).toLlvmType(), result);
+
+      RetVariable ret =  new RetVariable(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+      ret.ir.appendCode(varInt);
+
+      return ret;
+    }
+  }
+
+  // Concrete class for Variable: integer variable case
+  static public class TabVariable extends Variable {
+    String name;
+    int size;
+
+    public TabVariable(String name, int size) {
+      this.name = name;
+      this.size = size;
+    }
+
+    public String pp() {
+      return this.name + "[" + this.size + "]";
+    }
+
+    public RetVariable toIR() {
+      String result = "%" + name;
+
+      Llvm.Instruction varTab = new Llvm.VarTab((new IntType()).toLlvmType(), (new IntType()).toLlvmType(), size, result);
+
+      RetVariable ret =  new RetVariable(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+      ret.ir.appendCode(varTab);
+
+      return ret;
+    }
+  }
+
+/*  static public abstract class Instruction {
+	  public abstract String pp();
+
+	  public abstract RetInstruction toIR() throws TypeException;
+
+	  static public class RetInstruction {
+	      // The LLVM IR:
+	      public Llvm.IR ir;
+	      // And additional stuff:
+	      public Type type; // The type of the instruction
+	      public String result; // The name containing the instruction's result
+	      // (either an identifier, or an immediate value)
+
+	      public RetInstructions(Llvm.IR ir, Type type1, String result) {
+	        this.ir = ir;
+	        this.type = type;
+	        this.result = result;
+	      }
+	    }
+  }*/
+
+  // Concrete class for Instruction: store case
+  /*static public class AffInstruction {
+	  //TODO: Ajouter les variable à l'instruction d'affectation
+    Variable left;
+	  Expression right;
+
+	  public String pp() {
+		  return left.pp + " := " + right.pp();
+	  }
+
+	  public RetInstruction toIR() throws TypeExpression {
+
+    }
+  }*/
 
   // Warning: this is the type from VSL+, not the LLVM types!
   static public abstract class Type {

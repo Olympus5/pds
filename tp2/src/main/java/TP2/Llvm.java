@@ -123,4 +123,89 @@ public class Llvm {
   }
 
   // TODO : other instructions
+  static public class Sub extends Instruction {
+    Type type;
+    String left;
+    String right;
+    String lvalue;
+
+    public Sub(Type type, String left, String right, String lvalue) {
+      this.type = type;
+      this.left = left;
+      this.right = right;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return lvalue + " = sub " + type + " " + left + ", " + right +  "\n";
+    }
+  }
+
+  static public class Mul extends Instruction {
+    Type type;
+    String left;
+    String right;
+    String lvalue;
+
+    public Mul(Type type, String left, String right, String lvalue) {
+      this.type = type;
+      this.left = left;
+      this.right = right;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return lvalue + " = mul " + type + " " + left + ", " + right +  "\n";
+    }
+  }
+
+  static public class Div extends Instruction {
+    Type type;
+    String left;
+    String right;
+    String lvalue;
+
+    public Div(Type type, String left, String right, String lvalue) {
+      this.type = type;
+      this.left = left;
+      this.right = right;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return lvalue + " = mul " + type + " " + left + ", " + right +  "\n";
+    }
+  }
+
+  static public class VarInt extends Instruction {
+    Type type;
+    String lvalue;
+
+    public VarInt(Type type, String lvalue) {
+      this.type = type;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return lvalue + " = alloca " + type + "\n";
+    }
+  }
+
+  static public class VarTab extends Instruction {
+    Type type1;
+    Type type2;
+    int size;
+    String lvalue;
+
+    public VarTab(Type type1, Type type2, int size, String lvalue) {
+      this.type1 = type1;
+      this.type2 = type2;
+      this.size = size;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return lvalue + " = alloca " + type1 + "," + type2 + " " + size + "\n";
+    }
+  }
 }
