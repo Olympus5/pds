@@ -18,11 +18,10 @@ public class SymbolTable {
 
   public static class VariableSymbol extends Symbol {
     ASD.Type type;
-    String ident;
 
     VariableSymbol(ASD.Type type, String ident) {
       this.type = type;
-      this.ident = ident;
+      super.ident = ident;
     }
   }
 
@@ -84,5 +83,9 @@ public class SymbolTable {
     }
 
     return res; // Either the symbol or null
+  }
+
+  public int size() {
+    return table.size();
   }
 }

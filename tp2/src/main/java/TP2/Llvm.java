@@ -82,6 +82,12 @@ public class Llvm {
     }
   }
 
+  static public class VoidType extends Type {
+    public String toString() {
+      return "void";
+    }
+  }
+
   // TODO : other types
 
 
@@ -191,6 +197,7 @@ public class Llvm {
     }
   }
 
+  //TODO: A modifier pour gérer la deuxieme table des symboles
   static public class VarTab extends Instruction {
     Type type1;
     Type type2;
@@ -206,6 +213,24 @@ public class Llvm {
 
     public String toString() {
       return lvalue + " = alloca " + type1 + "," + type2 + " " + size + "\n";
+    }
+  }
+
+  static public class Aff extends Instruction {
+    Type typeValue;
+    String value;
+    Type typePtr;
+    String ptr;
+
+    public Aff(Type typeValue, String value, Type typePtr, String ptr) {
+      this.typeValue = typeValue;
+      this.value = value;
+      this.typePtr = typePtr;
+      this.ptr = ptr;
+    }
+
+    public String toString() {
+      return "store " + typeValue + " " + value + ", " + typePtr + "* %" + ptr + "\n";
     }
   }
 }

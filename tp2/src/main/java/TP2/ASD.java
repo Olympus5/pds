@@ -6,17 +6,17 @@ import java.util.stream.Collectors;
 import java.util.Iterator;
 
 public class ASD {
+  static SymbolTable symTable = new SymbolTable();
+
   static public class Program {
     Expression e; // What a program contains. TODO : change when you extend the language
     List<Variable> v;
+    Instruction i;
 
-    public Program(Expression e) {
-      this.e = e;
-    }
-
-    public Program(List<Variable> v, Expression e) {
+    public Program(List<Variable> v, Expression e, Instruction i) {
       this.v = v;
       this.e = e;
+      this.i = i;
     }
 
     // Pretty-printer
@@ -36,7 +36,7 @@ public class ASD {
         }
       }
 
-      ret += e.pp();
+      ret += (e != null) ? e.pp() : i.pp();
 
       return ret;
     }
@@ -44,32 +44,50 @@ public class ASD {
     // IR generation
     public Llvm.IR toIR() throws TypeException {
       // TODO : change when you extend the language
-
-      // computes the IR of the expression
-      Expression.RetExpression retExpr = e.toIR();
-
-      // add a return instruction
-      Llvm.Instruction ret = new Llvm.Return(retExpr.type.toLlvmType(), retExpr.result);
-
-      retExpr.ir.appendCode(ret);
+      Variable.RetVariable retVar = null;
 
       if(v != null) {
         if(!v.isEmpty()) {
           Iterator<Variable> it = v.iterator();
           // computes the IR of the variable
-          Variable.RetVariable retVar = it.next().toIR();
+          retVar = it.next().toIR();
 
           while(it.hasNext()) {
             retVar.ir.append(it.next().toIR().ir);
           }
-          // add expression
-          retVar.ir.append(retExpr.ir);
-
-          return retVar.ir;
         }
       }
 
-      return retExpr.ir;
+      if(e != null) {
+        // computes the IR of the expression
+        Expression.RetExpression retExpr = e.toIR();
+
+        // add a return instruction
+        Llvm.Instruction ret = new Llvm.Return(retExpr.type.toLlvmType(), retExpr.result);
+
+        retExpr.ir.appendCode(ret);
+
+        // add expression
+        if(v != null) {
+          retVar.ir.append(retExpr.ir);
+          return retVar.ir;
+        }
+
+        return retExpr.ir;
+      }
+
+      Instruction.RetInstruction retIns = i.toIR();
+
+      Llvm.Instruction ret = new Llvm.Return((new IntType()).toLlvmType(), "0");
+
+      retIns.ir.appendCode(ret);
+
+      if(v != null) {
+        retVar.ir.append(retIns.ir);
+        return retVar.ir;
+      }
+
+      return retIns.ir;
     }
   }
 
@@ -125,13 +143,13 @@ public class ASD {
 
       // We base our build on the left generated IR:
       // append right code
-      leftRet.ir.append(rightRet.ir);
 
       // allocate a new identifier for the result
       String result = Utils.newtmp();
 
       // new add instruction result = left + right
       Llvm.Instruction add = new Llvm.Add(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
+      leftRet.ir.append(rightRet.ir);
 
       // append this instruction
       leftRet.ir.appendCode(add);
@@ -318,6 +336,9 @@ public class ASD {
 
     public IntegerVariable(String name) {
       this.name = name;
+      SymbolTable.Symbol sym = new SymbolTable.VariableSymbol(new IntType(), name);
+      //On stocke la variable en table des symboles pour par la suite pouvoir travailler avec (affectation, calcul sur des exprs, etc.)
+      if(!symTable.add(sym)) System.err.println(name + ": symbole déjà existant");
     }
 
     public String pp() {
@@ -336,7 +357,7 @@ public class ASD {
     }
   }
 
-  // Concrete class for Variable: integer variable case
+  // Concrete class for Variable: tab variable case
   static public class TabVariable extends Variable {
     String name;
     int size;
@@ -344,6 +365,10 @@ public class ASD {
     public TabVariable(String name, int size) {
       this.name = name;
       this.size = size;
+
+      //TODO: attention un tableau de taille n est une autre table de symbole avec n éléments !!! A corriger
+      //On stocke la variable en table des symboles pour par la suite pouvoir travailler avec (affectation, calcul sur des exprs, etc.)
+      symTable.add(new SymbolTable.VariableSymbol(new IntType(), name));
     }
 
     public String pp() {
@@ -362,7 +387,7 @@ public class ASD {
     }
   }
 
-/*  static public abstract class Instruction {
+  static public abstract class Instruction {
 	  public abstract String pp();
 
 	  public abstract RetInstruction toIR() throws TypeException;
@@ -375,28 +400,56 @@ public class ASD {
 	      public String result; // The name containing the instruction's result
 	      // (either an identifier, or an immediate value)
 
-	      public RetInstructions(Llvm.IR ir, Type type1, String result) {
+	      public RetInstruction(Llvm.IR ir, Type type, String result) {
 	        this.ir = ir;
 	        this.type = type;
 	        this.result = result;
 	      }
 	    }
-  }*/
+  }
 
   // Concrete class for Instruction: store case
-  /*static public class AffInstruction {
-	  //TODO: Ajouter les variable à l'instruction d'affectation
-    Variable left;
+  static public class AffInstruction extends Instruction {
+    String left;
 	  Expression right;
 
+    public AffInstruction(String left, Expression right) {
+      this.left = left;
+      this.right = right;
+    }
+
 	  public String pp() {
-		  return left.pp + " := " + right.pp();
+		  return left + " := " + right.pp();
 	  }
 
-	  public RetInstruction toIR() throws TypeExpression {
+	  public RetInstruction toIR() throws TypeException {
+      SymbolTable.VariableSymbol leftRet = (SymbolTable.VariableSymbol) symTable.lookup(left);
+      RetInstruction ret = null;
+      String result = "";
+      Expression.RetExpression rightRet = right.toIR();
 
+      if(leftRet != null) {
+        // We check if the types mismatches
+        if(!leftRet.type.equals(rightRet.type)) {
+          throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
+        }
+
+        // new store instruction result = left := right
+        Llvm.Instruction aff = new Llvm.Aff(rightRet.type.toLlvmType(), rightRet.result, leftRet.type.toLlvmType(), leftRet.ident);
+
+        ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), leftRet.type, result);
+
+        // append this instruction
+        ret.ir.appendCode(aff);
+        rightRet.ir.append(ret.ir);
+      } else {
+        System.err.println("Erreur, '" + left + "' symbole non présent dans la table des symboles");
+        System.exit(0);
+      }
+
+      return new RetInstruction(rightRet.ir, leftRet.type, result);
     }
-  }*/
+  }
 
   // Warning: this is the type from VSL+, not the LLVM types!
   static public abstract class Type {
@@ -415,6 +468,20 @@ public class ASD {
 
     public Llvm.Type toLlvmType() {
       return new Llvm.IntType();
+    }
+  }
+
+  static class VoidType extends Type {
+    public String pp() {
+      return "VOID";
+    }
+
+    public boolean equals(Object obj) {
+      return obj instanceof VoidType;
+    }
+
+    public Llvm.Type toLlvmType() {
+      return new Llvm.VoidType();
     }
   }
 }

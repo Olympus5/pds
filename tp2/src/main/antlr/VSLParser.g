@@ -16,8 +16,9 @@ options {
 // TODO : other rules
 
 program returns [ASD.Program out]
-    : e=expression { $out = new ASD.Program($e.out); }
-    | v=variable e=expression { $out = new ASD.Program($v.out, $e.out); }// TODO : change when you extend the language
+    : e=expression { $out = new ASD.Program(null, $e.out, null); }
+    | v=variable e=expression { $out = new ASD.Program($v.out, $e.out, null); }
+    | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }// TODO : change when you extend the language
     ;
 
 variable returns [List<ASD.Variable> out]
@@ -46,6 +47,6 @@ primary returns [ASD.Expression out]
     | LP e=expression RP { $out = $e.out; }
     // TODO : that's all?
     ;
-/*instruction returns [ASD.Instruction out]
-	: IDENT AFF e=expression { $out = new ASD.AffInstruction($e.out); }
-	;*/
+instruction returns [ASD.Instruction out]
+	: IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }
+	;
