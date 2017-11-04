@@ -9,13 +9,27 @@ public class ASD {
   static SymbolTable symTable = new SymbolTable();
 
   static public class Program {
-    Expression e; // What a program contains. TODO : change when you extend the language
+    Bloc b;
+
+    public Program(Bloc b) {
+      this.b = b;
+    }
+
+    public String pp() {
+      return b.pp();
+    }
+
+    public Llvm.IR toIR() throws TypeException {
+      return b.toIR();
+    }
+   }
+
+  static public class Bloc {
     List<Variable> v;
     Instruction i;
 
-    public Program(List<Variable> v, Expression e, Instruction i) {
+    public Bloc(List<Variable> v, Instruction i) {
       this.v = v;
-      this.e = e;
       this.i = i;
     }
 
@@ -36,14 +50,13 @@ public class ASD {
         }
       }
 
-      ret += (e != null) ? e.pp() : i.pp();
+      ret += i.pp();
 
       return ret;
     }
 
     // IR generation
     public Llvm.IR toIR() throws TypeException {
-      // TODO : change when you extend the language
       Variable.RetVariable retVar = null;
 
       if(v != null) {
@@ -56,24 +69,6 @@ public class ASD {
             retVar.ir.append(it.next().toIR().ir);
           }
         }
-      }
-
-      if(e != null) {
-        // computes the IR of the expression
-        Expression.RetExpression retExpr = e.toIR();
-
-        // add a return instruction
-        Llvm.Instruction ret = new Llvm.Return(retExpr.type.toLlvmType(), retExpr.result);
-
-        retExpr.ir.appendCode(ret);
-
-        // add expression
-        if(v != null) {
-          retVar.ir.append(retExpr.ir);
-          return retVar.ir;
-        }
-
-        return retExpr.ir;
       }
 
       Instruction.RetInstruction retIns = i.toIR();
@@ -297,7 +292,7 @@ public class ASD {
       Expression.RetExpression ret = null;
 
       if(sym != null) {
-        String result = Utils.newlab(this.name);
+        String result = Utils.newglob(this.name);
 
         if(!symTable.add(new SymbolTable.VariableSymbol(sym.type, result))) {
           System.err.println("Erreur, symbole '"+ result +"' déjà déclaré dans la table des symbole");

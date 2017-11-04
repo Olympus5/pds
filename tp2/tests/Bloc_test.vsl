@@ -1,0 +1,4 @@
+{
+  INT test, res
+  res := test * 4
+}

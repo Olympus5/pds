@@ -12,14 +12,16 @@ options {
   import java.util.Arrays;
 }
 
-
-// TODO : other rules
-
 program returns [ASD.Program out]
-    : e=expression { $out = new ASD.Program(null, $e.out, null); }
+    /*: e=expression { $out = new ASD.Program(null, $e.out, null); }
     | v=variable e=expression { $out = new ASD.Program($v.out, $e.out, null); }
-    | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }// TODO : change when you extend the language
+    | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }*/
+    : LA b=bloc RA { $out = new ASD.Program($b.out); }
     ;
+
+bloc returns [ASD.Bloc out]
+  : v=variable i=instruction { $out = new ASD.Bloc($v.out, $i.out); }
+  ;
 
 variable returns [List<ASD.Variable> out]
     : INT { $out = new ArrayList<ASD.Variable>(); } (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
@@ -32,21 +34,18 @@ expression returns [ASD.Expression out]
     : l=factor PLUS r=expression  { $out = new ASD.AddExpression($l.out, $r.out); }
     | l=factor MINUS r=expression { $out = new ASD.SubExpression($l.out, $r.out); }
     | f=factor { $out = $f.out; }
-    // TODO : that's all?
     ;
 
 factor returns [ASD.Expression out]
     : l=primary TIMES r=factor { $out = new ASD.MulExpression($l.out, $r.out); }
     | l=primary DIV r=factor { $out = new ASD.DivExpression($l.out, $r.out); }
     | p=primary { $out = $p.out; }
-    // TODO : that's all?
     ;
 
 primary returns [ASD.Expression out]
     : INTEGER { $out = new ASD.IntegerExpression($INTEGER.int); }
     | IDENT { $out = new ASD.VariableExpression($IDENT.text); }
     | LP e=expression RP { $out = $e.out; }
-    // TODO : that's all?
     ;
 instruction returns [ASD.Instruction out]
 	: IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }

@@ -30,7 +30,8 @@ INT : 'INT';
 LB : '['; //left bracket
 RB : ']';
 COMMA : ',';
-// TODO : other keywords
+LA : '{';
+RA : '}';
 
 // other tokens (no conflict with keywords in VSL)
 IDENT   : LETTER (LETTER|DIGIT)*;
