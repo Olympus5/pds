@@ -115,7 +115,6 @@ public class ASD {
     }
   }
 
-
   // Concrete class for Expression: add case
   static public class AddExpression extends Expression {
     Expression left;
@@ -170,36 +169,26 @@ public class ASD {
       this.right = right;
     }
 
-    // Pretty-printer
     public String pp() {
       return "(" + left.pp() + " - " + right.pp() + ")";
     }
 
-    // IR generation
     public RetExpression toIR() throws TypeException {
       RetExpression leftRet = left.toIR();
       RetExpression rightRet = right.toIR();
 
-      // We check if the types mismatches
       if(!leftRet.type.equals(rightRet.type)) {
         throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
       }
 
-      // We base our build on the left generated IR:
-      // append right code
       leftRet.ir.append(rightRet.ir);
 
-      // allocate a new identifier for the result
       String result = Utils.newtmp();
 
-      // new sub instruction result = left - right
       Llvm.Instruction sub = new Llvm.Sub(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
-      // append this instruction
       leftRet.ir.appendCode(sub);
 
-      // return the generated IR, plus the type of this expression
-      // and where to find its result
       return new RetExpression(leftRet.ir, leftRet.type, result);
     }
   }
@@ -214,36 +203,26 @@ public class ASD {
       this.right = right;
     }
 
-    // Pretty-printer
     public String pp() {
       return "(" + left.pp() + " * " + right.pp() + ")";
     }
 
-    // IR generation
     public RetExpression toIR() throws TypeException {
       RetExpression leftRet = left.toIR();
       RetExpression rightRet = right.toIR();
 
-      // We check if the types mismatches
       if(!leftRet.type.equals(rightRet.type)) {
         throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
       }
 
-      // We base our build on the left generated IR:
-      // append right code
       leftRet.ir.append(rightRet.ir);
 
-      // allocate a new identifier for the result
       String result = Utils.newtmp();
 
-      // new mul instruction result = left * right
       Llvm.Instruction mul = new Llvm.Mul(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
-      // append this instruction
       leftRet.ir.appendCode(mul);
 
-      // return the generated IR, plus the type of this expression
-      // and where to find its result
       return new RetExpression(leftRet.ir, leftRet.type, result);
     }
   }
@@ -258,36 +237,26 @@ public class ASD {
      this.right = right;
    }
 
-   // Pretty-printer
    public String pp() {
      return "(" + left.pp() + " / " + right.pp() + ")";
    }
 
-   // IR generation
    public RetExpression toIR() throws TypeException {
      RetExpression leftRet = left.toIR();
      RetExpression rightRet = right.toIR();
 
-     // We check if the types mismatches
      if(!leftRet.type.equals(rightRet.type)) {
        throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
      }
 
-     // We base our build on the left generated IR:
-     // append right code
      leftRet.ir.append(rightRet.ir);
 
-     // allocate a new identifier for the result
      String result = Utils.newtmp();
 
-     // new div instruction result = left / right
      Llvm.Instruction div = new Llvm.Div(leftRet.type.toLlvmType(), leftRet.result, rightRet.result, result);
 
-     // append this instruction
      leftRet.ir.appendCode(div);
 
-     // return the generated IR, plus the type of this expression
-     // and where to find its result
      return new RetExpression(leftRet.ir, leftRet.type, result);
    }
  }
@@ -303,10 +272,50 @@ public class ASD {
       return "" + value;
     }
 
-    public RetExpression toIR() {
+    public RetExpression toIR() throws TypeException {
       // Here we simply return an empty IR
       // the `result' of this expression is the integer itself (as string)
       return new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "" + value);
+    }
+  }
+
+  static public class VariableExpression extends Expression {
+    String name;
+
+    public VariableExpression(String name) {
+      this.name = name;
+    }
+
+    public String pp() {
+      return "" + this.name;
+    }
+
+    //%res = load i32, i32* %var
+
+    public RetExpression toIR() {
+      SymbolTable.VariableSymbol sym = (SymbolTable.VariableSymbol) symTable.lookup(name);
+      Expression.RetExpression ret = null;
+
+      if(sym != null) {
+        String result = Utils.newlab(this.name);
+
+        if(!symTable.add(new SymbolTable.VariableSymbol(sym.type, result))) {
+          System.err.println("Erreur, symbole '"+ result +"' déjà déclaré dans la table des symbole");
+          System.exit(0);
+        }
+
+
+        Llvm.Instruction load = new Llvm.Load(new IntType().toLlvmType(), "%" + result, new IntType().toLlvmType(), "%" + this.name);
+
+        ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "%" + result);
+
+        ret.ir.appendCode(load);
+      } else {
+        System.err.println("Erreur, symbole '"+ this.name +"' non présent dans la table des symboles");
+        System.exit(0);
+      }
+
+      return ret;
     }
   }
 
@@ -345,7 +354,7 @@ public class ASD {
       return this.name;
     }
 
-    public RetVariable toIR() {
+    public RetVariable toIR() throws TypeException {
       String result = "%" + name;
 
       Llvm.Instruction varInt = new Llvm.VarInt((new IntType()).toLlvmType(), result);
@@ -375,7 +384,7 @@ public class ASD {
       return this.name + "[" + this.size + "]";
     }
 
-    public RetVariable toIR() {
+    public RetVariable toIR() throws TypeException {
       String result = "%" + name;
 
       Llvm.Instruction varTab = new Llvm.VarTab((new IntType()).toLlvmType(), (new IntType()).toLlvmType(), size, result);
@@ -435,7 +444,7 @@ public class ASD {
         }
 
         // new store instruction result = left := right
-        Llvm.Instruction aff = new Llvm.Aff(rightRet.type.toLlvmType(), rightRet.result, leftRet.type.toLlvmType(), leftRet.ident);
+        Llvm.Instruction aff = new Llvm.Aff(rightRet.type.toLlvmType(), rightRet.result, leftRet.type.toLlvmType(), "%" + leftRet.ident);
 
         ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), leftRet.type, result);
 

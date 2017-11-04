@@ -1,0 +1,2 @@
+INT test, res
+res := 4 * test

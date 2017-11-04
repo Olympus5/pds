@@ -230,7 +230,25 @@ public class Llvm {
     }
 
     public String toString() {
-      return "store " + typeValue + " " + value + ", " + typePtr + "* %" + ptr + "\n";
+      return "store " + typeValue + " " + value + ", " + typePtr + "* " + ptr + "\n";
+    }
+  }
+
+  static public class Load extends Instruction {
+    Type typeValue;
+    Type typePtr;
+    String ptr;
+    String lvalue;
+
+    public Load(Type typeValue, String lvalue, Type typePtr, String ptr) {
+      this.typeValue = typeValue;
+      this.lvalue = lvalue;
+      this.typePtr = typePtr;
+      this.ptr = ptr;
+    }
+
+    public String toString() {
+      return this.lvalue + " = " + " load " + this.typeValue + ", " + this.typePtr + "* " + this.ptr + "\n";
     }
   }
 }

@@ -44,6 +44,7 @@ factor returns [ASD.Expression out]
 
 primary returns [ASD.Expression out]
     : INTEGER { $out = new ASD.IntegerExpression($INTEGER.int); }
+    | IDENT { $out = new ASD.VariableExpression($IDENT.text); }
     | LP e=expression RP { $out = $e.out; }
     // TODO : that's all?
     ;
