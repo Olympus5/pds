@@ -1,0 +1,9 @@
+INT res, test
+IF res - 4
+THEN
+  res := test * 4
+ELSE
+{
+  res := test / 30
+}
+FI

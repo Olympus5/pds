@@ -9,38 +9,26 @@ public class ASD {
   static SymbolTable symTable = new SymbolTable();
 
   static public class Program {
+    List<Variable> v;
     Bloc b;
 
     public Program(Bloc b) {
+      this.v = null;
       this.b = b;
     }
 
-    public String pp() {
-      return b.pp();
-    }
-
-    public Llvm.IR toIR() throws TypeException {
-      return b.toIR();
-    }
-   }
-
-  static public class Bloc {
-    List<Variable> v;
-    Instruction i;
-
-    public Bloc(List<Variable> v, Instruction i) {
+    public Program(List<Variable> v, Bloc b) {
       this.v = v;
-      this.i = i;
+      this.b = b;
     }
 
-    // Pretty-printer
     public String pp() {
       String ret = "";
 
       if(v != null) {
         if(!v.isEmpty()) {
           Iterator<Variable> it = v.iterator();
-          ret = "INT " + it.next().pp();
+          ret += "INT " + it.next().pp();
 
           while(it.hasNext()) {
             ret += ", " + it.next().pp();
@@ -50,12 +38,9 @@ public class ASD {
         }
       }
 
-      ret += i.pp();
-
-      return ret;
+      return ret + "" + b.pp();
     }
 
-    // IR generation
     public Llvm.IR toIR() throws TypeException {
       Variable.RetVariable retVar = null;
 
@@ -71,7 +56,7 @@ public class ASD {
         }
       }
 
-      Instruction.RetInstruction retIns = i.toIR();
+      Instruction.RetInstruction retIns = b.toIR();
 
       Llvm.Instruction ret = new Llvm.Return((new IntType()).toLlvmType(), "0");
 
@@ -83,6 +68,24 @@ public class ASD {
       }
 
       return retIns.ir;
+    }
+   }
+
+  static public class Bloc {
+    Instruction i;
+
+    public Bloc(Instruction i) {
+      this.i = i;
+    }
+
+    // Pretty-printer
+    public String pp() {
+      return "{\n" + i.pp() + "\n}\n";
+    }
+
+    // IR generation
+    public Instruction.RetInstruction toIR() throws TypeException {
+      return i.toIR();
     }
   }
 
@@ -455,6 +458,88 @@ public class ASD {
     }
   }
 
+  static public class IfInstruction extends Instruction {
+    Expression e;
+    Bloc b;
+
+    public IfInstruction(Expression e, Bloc b) {
+      this.e = e;
+      this.b = b;
+    }
+
+    public String pp() {
+      return "IF " + e.pp() + "\nTHEN\n" + b.pp() + "FI";
+    }
+
+    public RetInstruction toIR() throws TypeException {
+      Expression.RetExpression cond = e.toIR();
+
+      String result = Utils.newtmp();
+      String iftrue = Utils.newlab("IF");
+      String iffalse = Utils.newlab("FI");
+
+      Llvm.Instruction iF = new Llvm.Icmp(cond.type.toLlvmType(), cond.result, result);
+      Llvm.Instruction brCond = new Llvm.BrCond(result, "%" + iftrue, "%" + iffalse);
+      Llvm.Instruction brUncond = new Llvm.BrUncond("%" + iffalse);
+
+      RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+
+      ret.ir.append(cond.ir);
+      ret.ir.appendCode(iF);
+      ret.ir.appendCode(brCond);
+      ret.ir.appendCode(new Llvm.Label(iftrue));
+      ret.ir.append(b.toIR().ir);
+      ret.ir.appendCode(brUncond);
+      ret.ir.appendCode(new Llvm.Label(iffalse));
+
+      return ret;
+    }
+  }
+
+  static public class IfElseInstruction extends Instruction {
+    Expression e;
+    Bloc b1;
+    Bloc b2;
+
+    public IfElseInstruction(Expression e, Bloc b1, Bloc b2) {
+      this.e = e;
+      this.b1 = b1;
+      this.b2 = b2;
+    }
+
+    public String pp() {
+      return "IF " + e.pp() + "\nTHEN\n" + b1.pp() + "\nELSE\n" + b2.pp() + "FI";
+    }
+
+    public RetInstruction toIR() throws TypeException {
+      Expression.RetExpression cond = e.toIR();
+
+      String result = Utils.newtmp();
+      String iftrue = Utils.newlab("IF");
+      String iffalse = Utils.newlab("ELSE");
+      String endif = Utils.newlab("FI");
+
+      Llvm.Instruction iF = new Llvm.Icmp(cond.type.toLlvmType(), cond.result, result);
+      Llvm.Instruction brCond = new Llvm.BrCond(result, "%" + iftrue, "%" + iffalse);
+      Llvm.Instruction brUncond = new Llvm.BrUncond("%" + endif);
+
+      RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+
+      ret.ir.append(cond.ir);
+      ret.ir.appendCode(iF);
+      ret.ir.appendCode(brCond);
+      ret.ir.appendCode(new Llvm.Label(iftrue));
+      ret.ir.append(b1.toIR().ir);
+      ret.ir.appendCode(brUncond);
+      ret.ir.appendCode(new Llvm.Label(iffalse));
+      ret.ir.append(b2.toIR().ir);
+      ret.ir.appendCode(brUncond);
+      ret.ir.appendCode(new Llvm.Label(endif));
+
+      return ret;
+    }
+  }
+
   // Warning: this is the type from VSL+, not the LLVM types!
   static public abstract class Type {
     public abstract String pp();
@@ -466,7 +551,8 @@ public class ASD {
       return "INT";
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj instanceof IntType;
     }
 
@@ -480,6 +566,7 @@ public class ASD {
       return "VOID";
     }
 
+    @Override
     public boolean equals(Object obj) {
       return obj instanceof VoidType;
     }

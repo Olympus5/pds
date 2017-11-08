@@ -16,11 +16,12 @@ program returns [ASD.Program out]
     /*: e=expression { $out = new ASD.Program(null, $e.out, null); }
     | v=variable e=expression { $out = new ASD.Program($v.out, $e.out, null); }
     | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }*/
-    : LA b=bloc RA { $out = new ASD.Program($b.out); }
+    : v=variable b=bloc { $out = new ASD.Program($v.out, $b.out); }
     ;
 
 bloc returns [ASD.Bloc out]
-  : v=variable i=instruction { $out = new ASD.Bloc($v.out, $i.out); }
+  : LA i=instruction RA { $out = new ASD.Bloc($i.out); }
+  | i = instruction { $out = new ASD.Bloc($i.out); }
   ;
 
 variable returns [List<ASD.Variable> out]
@@ -47,6 +48,9 @@ primary returns [ASD.Expression out]
     | IDENT { $out = new ASD.VariableExpression($IDENT.text); }
     | LP e=expression RP { $out = $e.out; }
     ;
+
 instruction returns [ASD.Instruction out]
 	: IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }
+  | IF e=expression THEN b=bloc ENDIF { $out = new ASD.IfInstruction($e.out, $b.out); }
+  | IF e=expression THEN b1=bloc ELSE b2=bloc ENDIF { $out = new ASD.IfElseInstruction($e.out, $b1.out, $b2.out); }
 	;

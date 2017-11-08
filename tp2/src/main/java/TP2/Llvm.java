@@ -51,14 +51,14 @@ public class Llvm {
       r.append("\n\n");
 
       // We create the function main
-      // TODO : remove this when you extend the language
+      //TODO: remove this when you extend the language
       r.append("define i32 @main() {\n");
 
 
       for(Instruction inst: code)
         r.append(inst);
 
-      // TODO : remove this when you extend the language
+      //TODO: remove this when you extend the language
       r.append("}\n");
 
       return r.toString();
@@ -88,7 +88,7 @@ public class Llvm {
     }
   }
 
-  // TODO : other types
+  //TODO: other types
 
 
   // LLVM IR Instructions
@@ -128,7 +128,6 @@ public class Llvm {
     }
   }
 
-  // TODO : other instructions
   static public class Sub extends Instruction {
     Type type;
     String left;
@@ -248,7 +247,63 @@ public class Llvm {
     }
 
     public String toString() {
-      return this.lvalue + " = " + " load " + this.typeValue + ", " + this.typePtr + "* " + this.ptr + "\n";
+      return this.lvalue + " = load " + this.typeValue + ", " + this.typePtr + "* " + this.ptr + "\n";
+    }
+  }
+
+  static public class Icmp extends Instruction {
+    Type typeCond;
+    String op1;
+    String lvalue;
+
+    public Icmp(Type typeCond, String op1, String lvalue) {
+      this.typeCond = typeCond;
+      this.op1 = op1;
+      this.lvalue = lvalue;
+    }
+
+    public String toString() {
+      return this.lvalue + " = icmp ne " + this.typeCond + " " + this.op1 + ", 0\n";
+    }
+  }
+
+  static public class BrCond extends Instruction {
+    String cond;
+    String label1;
+    String label2;
+
+    public BrCond(String cond, String label1, String label2) {
+      this.cond = cond;
+      this.label1 = label1;
+      this.label2 = label2;
+    }
+
+    public String toString() {
+      return "br i1 " + cond + ", label " + label1 + ", label " + label2 + "\n";
+    }
+  }
+
+  static public class BrUncond extends Instruction {
+    String label;
+
+    public BrUncond(String label) {
+      this.label = label;
+    }
+
+    public String toString() {
+      return "br label " + label + "\n";
+    }
+  }
+
+  static public class Label extends Instruction {
+    String name;
+
+    public Label(String name) {
+      this.name = name;
+    }
+
+    public String toString() {
+      return name + ": \n";
     }
   }
 }

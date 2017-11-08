@@ -32,6 +32,10 @@ RB : ']';
 COMMA : ',';
 LA : '{';
 RA : '}';
+IF : 'IF';
+THEN : 'THEN';
+ELSE : 'ELSE';
+ENDIF : 'FI';
 
 // other tokens (no conflict with keywords in VSL)
 IDENT   : LETTER (LETTER|DIGIT)*;
