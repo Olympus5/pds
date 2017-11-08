@@ -1,4 +1,4 @@
+INT test, res
 {
-  INT test, res
   res := test * 4
 }

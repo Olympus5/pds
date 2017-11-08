@@ -1,0 +1,5 @@
+INT test, res;
+WHILE test - 4
+DO
+  res := test - 1
+DONE

@@ -540,6 +540,47 @@ public class ASD {
     }
   }
 
+  static public class WhileInstruction extends Instruction {
+    Expression e;
+    Bloc b;
+
+    public WhileInstruction(Expression e, Bloc b) {
+      this.e = e;
+      this.b = b;
+    }
+
+    public String pp() {
+      return "WHILE " + e.pp() + " \nDO\n " + b.pp() + " DONE\n";
+    }
+
+    public RetInstruction toIR() throws TypeException {
+      Expression.RetExpression cond = e.toIR();
+
+      String result = Utils.newtmp();
+      String loop = Utils.newlab("LOOP");
+      String dO = Utils.newlab("DO");
+      String done = Utils.newlab("DONE");
+
+      Llvm.Instruction whilE = new Llvm.Icmp(cond.type.toLlvmType(), cond.result, result);
+      Llvm.Instruction brCond = new Llvm.BrCond(result, "%" + dO, "%" + done);
+      Llvm.Instruction brUncond = new Llvm.BrUncond("%" + loop);
+
+      RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), result);
+
+      ret.ir.appendCode(brUncond);
+      ret.ir.appendCode(new Llvm.Label(loop));
+      ret.ir.append(cond.ir);
+      ret.ir.appendCode(whilE);
+      ret.ir.appendCode(brCond);
+      ret.ir.appendCode(new Llvm.Label(dO));
+      ret.ir.append(b.toIR().ir);
+      ret.ir.appendCode(brUncond);
+      ret.ir.appendCode(new Llvm.Label(done));
+
+      return ret;
+    }
+  }
+
   // Warning: this is the type from VSL+, not the LLVM types!
   static public abstract class Type {
     public abstract String pp();

@@ -53,4 +53,5 @@ instruction returns [ASD.Instruction out]
 	: IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }
   | IF e=expression THEN b=bloc ENDIF { $out = new ASD.IfInstruction($e.out, $b.out); }
   | IF e=expression THEN b1=bloc ELSE b2=bloc ENDIF { $out = new ASD.IfElseInstruction($e.out, $b1.out, $b2.out); }
+  | WHILE e=expression DO b=bloc DONE { $out = new ASD.WhileInstruction($e.out, $b.out); }
 	;
