@@ -72,20 +72,60 @@ public class ASD {
    }
 
   static public class Bloc {
-    Instruction i;
+    Sequence s;
 
-    public Bloc(Instruction i) {
-      this.i = i;
+    public Bloc(Sequence s) {
+      this.s = s;
     }
 
     // Pretty-printer
     public String pp() {
-      return "{\n" + i.pp() + "\n}\n";
+      return "{\n" + s.pp() + "}\n";
     }
 
     // IR generation
     public Instruction.RetInstruction toIR() throws TypeException {
-      return i.toIR();
+      return s.toIR();
+    }
+  }
+
+  static public class Sequence {
+    List<Instruction> i;
+
+    public Sequence(List<Instruction> i) {
+      this.i = i;
+    }
+
+    public String pp() {
+      String ret = "";
+
+      if(this.i != null) {
+        Iterator<Instruction> it = this.i.iterator();
+
+        while(it.hasNext()) {
+          ret += it.next().pp() + "\n";
+        }
+      }
+
+      return ret;
+    }
+
+    public Instruction.RetInstruction toIR() throws TypeException {
+      Instruction.RetInstruction retIns = null;
+
+      if(this.i != null) {
+        if(!this.i.isEmpty()) {
+          Iterator<Instruction> it = this.i.iterator();
+          // computes the IR of the variable
+          retIns = it.next().toIR();
+
+          while(it.hasNext()) {
+            retIns.ir.append(it.next().toIR().ir);
+          }
+        }
+      }
+
+      return retIns;
     }
   }
 
@@ -364,6 +404,7 @@ public class ASD {
     }
   }
 
+  //TODO: A REFAIRE !!!!!!!!!!!
   // Concrete class for Variable: tab variable case
   static public class TabVariable extends Variable {
     String name;

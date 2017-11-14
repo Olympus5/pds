@@ -13,15 +13,19 @@ options {
 }
 
 program returns [ASD.Program out]
-    /*: e=expression { $out = new ASD.Program(null, $e.out, null); }
+    /*: b=bloc { $out = new ASD.Program(null, $b.out); }
     | v=variable e=expression { $out = new ASD.Program($v.out, $e.out, null); }
     | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }*/
     : v=variable b=bloc { $out = new ASD.Program($v.out, $b.out); }
     ;
 
 bloc returns [ASD.Bloc out]
-  : LA i=instruction RA { $out = new ASD.Bloc($i.out); }
-  | i = instruction { $out = new ASD.Bloc($i.out); }
+  : LBB s=sequence RBB { $out = new ASD.Bloc($s.out); }
+  | s=sequence { $out = new ASD.Bloc($s.out); }
+  ;
+
+sequence returns [ASD.Sequence out]
+  : i=instruction { $out = new ASD.Sequence($i.out); }
   ;
 
 variable returns [List<ASD.Variable> out]
@@ -49,9 +53,9 @@ primary returns [ASD.Expression out]
     | LP e=expression RP { $out = $e.out; }
     ;
 
-instruction returns [ASD.Instruction out]
-	: IDENT AFF e=expression { $out = new ASD.AffInstruction($IDENT.text, $e.out); }
-  | IF e=expression THEN b=bloc ENDIF { $out = new ASD.IfInstruction($e.out, $b.out); }
-  | IF e=expression THEN b1=bloc ELSE b2=bloc ENDIF { $out = new ASD.IfElseInstruction($e.out, $b1.out, $b2.out); }
-  | WHILE e=expression DO b=bloc DONE { $out = new ASD.WhileInstruction($e.out, $b.out); }
-	;
+instruction returns [List<ASD.Instruction> out]
+	: { $out = new ArrayList<ASD.Instruction>(); }(IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
+  | IF e=expression THEN b=bloc ENDIF { $out.add(new ASD.IfInstruction($e.out, $b.out)); }
+  | IF e=expression THEN b1=bloc ELSE b2=bloc ENDIF { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }
+  | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); })+
+  ;

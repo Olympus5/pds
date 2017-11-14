@@ -30,8 +30,8 @@ INT : 'INT';
 LB : '['; //left bracket
 RB : ']';
 COMMA : ',';
-LA : '{';
-RA : '}';
+LBB : '{';
+RBB : '}';
 IF : 'IF';
 THEN : 'THEN';
 ELSE : 'ELSE';

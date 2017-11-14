@@ -178,7 +178,7 @@ public class Llvm {
     }
 
     public String toString() {
-      return lvalue + " = mul " + type + " " + left + ", " + right +  "\n";
+      return lvalue + " = udiv " + type + " " + left + ", " + right +  "\n";
     }
   }
 

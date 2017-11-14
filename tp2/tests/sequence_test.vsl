@@ -1,0 +1,7 @@
+INT test
+test := 17 / ((4 - 4) * (32 + 15)) * 34
+test := 2 - 3 + test
+IF(test - 4)
+THEN
+  test := 0
+FI
