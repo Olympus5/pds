@@ -1,0 +1,6 @@
+FUNC INT main() {
+    INT test
+    test := 0
+    test := 4
+    test := test - 2 * 30
+}

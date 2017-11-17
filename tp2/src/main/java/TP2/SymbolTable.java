@@ -27,13 +27,12 @@ public class SymbolTable {
 
   public static class FunctionSymbol extends Symbol {
     ASD.Type returnType;
-    String ident;
     SymbolTable arguments; // Its argument can be viewed as a symbol table
     boolean defined; // false if declared but not defined
 
     FunctionSymbol(ASD.Type returnType, String ident, SymbolTable arguments, boolean defined) {
       this.returnType = returnType;
-      this.ident = ident;
+      super.ident = ident;
       this.arguments = arguments;
       this.defined = defined;
     }
@@ -60,6 +59,7 @@ public class SymbolTable {
   // Returns false if the symbol cannot be added (already in the scope)
   public boolean add(Symbol sym) {
     Symbol res = this.table.get(sym.ident);
+
     if(res != null) {
       return false;
     }

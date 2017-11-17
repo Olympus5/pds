@@ -39,6 +39,11 @@ ENDIF : 'FI';
 WHILE : 'WHILE';
 DO : 'DO';
 DONE : 'DONE';
+PROTO : 'PROTO';
+VOID : 'VOID';
+FUNC : 'FUNC';
+MAIN : 'main';
+
 
 // other tokens (no conflict with keywords in VSL)
 IDENT   : LETTER (LETTER|DIGIT)*;

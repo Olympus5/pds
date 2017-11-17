@@ -1,7 +1,8 @@
 package TP2;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Iterator;
 
 // This file contains a simple LLVM IR representation
 // and methods to generate its string representation
@@ -52,14 +53,14 @@ public class Llvm {
 
       // We create the function main
       //TODO: remove this when you extend the language
-      r.append("define i32 @main() {\n");
+      //r.append("define i32 @main() {\n");
 
 
       for(Instruction inst: code)
         r.append(inst);
 
       //TODO: remove this when you extend the language
-      r.append("}\n");
+      //r.append("}\n");
 
       return r.toString();
     }
@@ -306,4 +307,39 @@ public class Llvm {
       return name + ": \n";
     }
   }
+  //TODO: Fonction
+  static public class Define extends Instruction {
+      Type typeFunction;
+      String name;
+      List<String> attrs;
+
+      public Define(Type typeFunction, String name, List<String> attrs) {
+          this.typeFunction = typeFunction;
+          this.name = name;
+          this.attrs = attrs;
+      }
+
+      public String toString() {
+          String ret = "define " + this.typeFunction + " " + this.name + "(";
+          if(!attrs.isEmpty()) {
+              Iterator<String> it = attrs.iterator();
+
+              ret += new IntType().toString() + " " + it.next();
+
+              while(it.hasNext()) {
+                  ret += ", " + new IntType().toString() + " " + it.next();
+              }
+          }
+          return ret + "){\n";
+      }
+  }
+
+  static public class EndFunction extends Instruction {
+      public EndFunction() {}
+
+      public String toString() {
+          return "}\n";
+      }
+  }
+  //TODO: Tableau: alloca et getelementptr
 }

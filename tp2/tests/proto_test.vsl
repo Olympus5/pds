@@ -1,0 +1,7 @@
+PROTO INT fact(a, b, c, d)
+PROTO VOID fact1(a, b, c, d)
+PROTO INT fact2()
+PROTO VOID fact3()
+INT test
+test := 4
+test := test - 1
