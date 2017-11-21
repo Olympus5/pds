@@ -43,6 +43,7 @@ PROTO : 'PROTO';
 VOID : 'VOID';
 FUNC : 'FUNC';
 MAIN : 'main';
+RETURN : 'RETURN';
 
 
 // other tokens (no conflict with keywords in VSL)

@@ -15,4 +15,3 @@ define i32 @main() {
 %tmp2 = add i32 %tmp1, 17
 ret i32 %tmp2
 }
-

@@ -324,13 +324,32 @@ public class Llvm {
           if(!attrs.isEmpty()) {
               Iterator<String> it = attrs.iterator();
 
-              ret += new IntType().toString() + " " + it.next();
+              ret += new IntType().toString() + " %" + it.next();
 
               while(it.hasNext()) {
-                  ret += ", " + new IntType().toString() + " " + it.next();
+                  ret += ", " + new IntType().toString() + " %" + it.next();
               }
           }
           return ret + "){\n";
+      }
+  }
+
+  static public class Attrs extends Instruction {
+      List<String> attrs;
+
+      public Attrs(List<String> attrs) {
+          this.attrs = attrs;
+      }
+
+      public String toString() {
+          String ret = "";
+
+          for(String attr : this.attrs) {
+              ret += "%" + attr + "1 = alloca i32\n";
+              ret += "store i32 %" + attr + ", i32* %" + attr + "1\n";
+          }
+
+          return ret ;
       }
   }
 
@@ -338,8 +357,21 @@ public class Llvm {
       public EndFunction() {}
 
       public String toString() {
-          return "}\n";
+          return "}\n\n";
       }
   }
   //TODO: Tableau: alloca et getelementptr
+
+
+  static public class Commentary extends Instruction {
+      String comment;
+
+      public Commentary(String comment) {
+          this.comment = comment;
+      }
+
+      public String toString() {
+          return "; " + comment + "\n";
+      }
+  }
 }

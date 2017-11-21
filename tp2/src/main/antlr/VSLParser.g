@@ -13,9 +13,6 @@ options {
 }
 
 program returns [ASD.Program out]
-    /*: b=bloc { $out = new ASD.Program(null, $b.out); }
-    | v=variable e=expression { $out = new ASD.Program($v.out, $e.out, null); }
-    | v=variable i=instruction { $out = new ASD.Program($v.out, null, $i.out); }*/
     : p=prototype f=function { $out = new ASD.Program($p.out, $f.out); }
     ;
 
@@ -25,10 +22,9 @@ prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String no
   ;
 
 function returns [List<ASD.Function> out] locals [List<String> attr, String nom]
-  //: { $attr = new ArrayList<String>(); } FUNC INT MAIN LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP v=variable b=bloc { $out = new ASD.MainFunction(); }
   : {$out = new ArrayList<ASD.Function>(); }
-    (FUNC INT MAIN LP RP LBB v=variable b=bloc RBB { $out.add(new ASD.MainFunction($MAIN.text, new ArrayList<String>(), $v.out, $b.out)); }
-  | FUNC INT IDENT {$nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP LBB b=bloc RBB { $out.add(new ASD.IntFunction($nom, $attr, $b.out)); })+
+    ( { $attr = new ArrayList<String>(); } (FUNC INT MAIN LP RP LBB v=variable b=bloc RBB { $out.add(new ASD.MainFunction($MAIN.text, $attr, $v.out, $b.out)); }
+  | FUNC INT IDENT {$nom = $IDENT.text; } LP ((IDENT { System.err.println($attr != null); $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP LBB b=bloc RBB { $out.add(new ASD.IntFunction($nom, $attr, $b.out)); }))+
   /*| FUNC VOID IDENT LP RP b=bloc { $out = new VoidFunction($IDENT.text, $b.out); }*/
   ;
 
@@ -42,10 +38,10 @@ sequence returns [ASD.Sequence out]
   ;
 
 variable returns [List<ASD.Variable> out]
-    : INT { $out = new ArrayList<ASD.Variable>(); } (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
+    : { $out = new ArrayList<ASD.Variable>(); } (INT  (IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
                                                     | IDENT LB INTEGER RB { $out.add(new ASD.TabVariable($IDENT.text, $INTEGER.int)); })
                                                     (COMMA IDENT { $out.add(new ASD.IntegerVariable($IDENT.text)); }
-                                                    | COMMA IDENT LB INTEGER RB { $out.add(new ASD.TabVariable($IDENT.text, $INTEGER.int)); })*
+                                                    | COMMA IDENT LB INTEGER RB { $out.add(new ASD.TabVariable($IDENT.text, $INTEGER.int)); })*)?
     ;
 
 expression returns [ASD.Expression out]

@@ -5,9 +5,11 @@ declare i32 @printf(i8* noalias nocapture, ...)
 
 ; Actual code begins
 
+; ModuleID = 'main'
 
 
 define i32 @main(){
+entry: 
 %test = alloca i32
 store i32 0, i32* %test
 store i32 4, i32* %test

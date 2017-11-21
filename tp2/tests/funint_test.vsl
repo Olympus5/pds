@@ -1,0 +1,17 @@
+PROTO INT fact(n)
+FUNC INT main() {
+    INT test
+    test := 4 * 2
+    test := test / 4
+
+    IF 0
+    THEN
+        test := test - 1
+    ELSE
+        test := 0
+    FI
+}
+
+FUNC INT fact(n) {
+    n := 32 - n
+}

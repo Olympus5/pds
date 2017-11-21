@@ -1,5 +1,6 @@
 package TP2;
 
+import com.sun.org.apache.bcel.internal.generic.Instruction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -7,6 +8,8 @@ import java.util.stream.Collectors;
 
 public class ASD {
     static SymbolTable symTable = new SymbolTable();
+    static String scope = "main";
+    static SymbolTable scopeTable = symTable;
 
     static public class Program {
         List<Prototype> p;
@@ -34,29 +37,6 @@ public class ASD {
         public Llvm.IR toIR() throws TypeException {
             Function.RetFunction ret = null;
 
-            /*if (v != null) {
-                if (!v.isEmpty()) {
-                    Iterator < Variable > it = v.iterator();
-                    // computes the IR of the variable
-                    retVar = it.next().toIR();
-
-                    while (it.hasNext()) {
-                        retVar.ir.append(it.next().toIR().ir);
-                    }
-                }
-            }
-
-            Instruction.RetInstruction retIns = b.toIR();
-
-            Llvm.Instruction ret = new Llvm.Return((new IntType()).toLlvmType(), "0");
-
-            retIns.ir.appendCode(ret);
-
-            if (v != null) {
-                retVar.ir.append(retIns.ir);
-                return retVar.ir;
-            }*/
-
             for(Function fun : f) {
                 if(ret == null) ret = fun.toIR();
                 else ret.ir.append(fun.toIR().ir);
@@ -82,7 +62,7 @@ public class ASD {
     static public class IntPrototype extends Prototype {
         public IntPrototype(String name, List<String> attrs) {
             super(name, attrs);
-            SymbolTable paramTable = new SymbolTable();
+            SymbolTable paramTable = new SymbolTable(symTable);
 
             for(String attr : super.attrs) {
                 if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + "(attr): symbole déjà existant");
@@ -114,11 +94,12 @@ public class ASD {
     static public class VoidPrototype extends Prototype {
         public VoidPrototype(String name, List<String> attrs) {
             super(name, attrs);
-            SymbolTable paramTable = new SymbolTable();
+            SymbolTable paramTable = new SymbolTable(symTable);
 
             int i = 0;
             for(String attr : super.attrs) {
                 if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + "(attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr + "1"))) System.err.println(attr + "(attr): symbole déjà existant");
             }
 
             SymbolTable.Symbol sym = new SymbolTable.FunctionSymbol(new VoidType(), name, paramTable, true);//TODO: Ajouter les arguments
@@ -251,16 +232,21 @@ public class ASD {
 
         @Override
         public RetFunction toIR() throws TypeException {
+            scopeTable = symTable;
             Variable.RetVariable retVar = null;
             RetFunction retFun;
             String result = "";
 
             retFun = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), result);
 
+            Llvm.Commentary moduleID = new Llvm.Commentary("ModuleID = 'main'");
             Llvm.Instruction decl = new Llvm.Define((new IntType()).toLlvmType(), "@" + this.name, this.attrs);
+            Llvm.Instruction entry = new Llvm.Label("entry");
             Llvm.Instruction end = new Llvm.EndFunction();
 
+            retFun.ir.appendHeader(moduleID);
             retFun.ir.appendCode(decl);
+            retFun.ir.appendCode(entry);
 
             if(!vars.isEmpty()) {
                 Iterator<Variable> it = vars.iterator();
@@ -312,27 +298,37 @@ public class ASD {
 
         @Override
         public String pp() {
-            return "FUNC INT " + super.name + " (){\n" + "\n" + b.pp() + "\n}\n";
+            String ret = "FUNC INT " + super.name + " (";
+
+            return ret + "){\n" + "\n" + b.pp() + "\n}\n";
         }
 
         @Override
         public RetFunction toIR() throws TypeException {
+            SymbolTable.FunctionSymbol sym = (SymbolTable.FunctionSymbol) symTable.lookup(super.name);
+
+            if(sym == null) {
+                System.err.println("Erreur, symbole '" + super.name + "' non présent dans la table des symboles");
+                System.exit(0);
+            } else {
+                scopeTable = sym.arguments;
+            }
+
+            scope = super.name;
+
             RetFunction retFun;
             String result = "";
-
-            SymbolTable.Symbol fun;
-
-            if((fun = symTable.lookup(name)) != null) {
-                System.err.println("Erreur,'" + this.name + "' symbole inexistant en table des symboles.");
-                System.exit(0);
-            }
 
             retFun = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), result);
 
             Llvm.Instruction decl = new Llvm.Define((new IntType()).toLlvmType(), "@" + this.name, this.attrs);
+            Llvm.Instruction entry = new Llvm.Label("entry");
+            Llvm.Instruction attrs = new Llvm.Attrs(this.attrs);
             Llvm.Instruction end = new Llvm.EndFunction();
 
             retFun.ir.appendCode(decl);
+            retFun.ir.appendCode(entry);
+            retFun.ir.appendCode(attrs);
 
             Instruction.RetInstruction retIns = b.toIR();
 
@@ -345,18 +341,6 @@ public class ASD {
             retFun.ir.appendCode(end);
 
             return retFun;
-        }
-    }
-
-    static public class VoidFunction extends Function {
-        @Override
-        public String pp() {
-            return "";
-        }
-
-        @Override
-        public RetFunction toIR() throws TypeException {
-            return null;
         }
     }
 
@@ -619,20 +603,22 @@ public class ASD {
 
         //%res = load i32, i32* %var
 
-        public RetExpression toIR() {
-            SymbolTable.VariableSymbol sym = (SymbolTable.VariableSymbol) symTable.lookup(name);
+        public RetExpression toIR() throws TypeException {
+            SymbolTable.VariableSymbol sym = (SymbolTable.VariableSymbol) scopeTable.lookup(this.name);
             Expression.RetExpression ret = null;
+            String name1 = this.name;
 
             if (sym != null) {
                 String result = Utils.newglob(this.name);
 
-                if (!symTable.add(new SymbolTable.VariableSymbol(sym.type, result))) {
+                if (!scopeTable.add(new SymbolTable.VariableSymbol(sym.type, result))) {
                     System.err.println("Erreur, symbole '" + result + "' déjà déclaré dans la table des symbole");
                     System.exit(0);
                 }
 
+                if(!scope.equals("main")) name1 += "1";
 
-                Llvm.Instruction load = new Llvm.Load(new IntType().toLlvmType(), "%" + result, new IntType().toLlvmType(), "%" + this.name);
+                Llvm.Instruction load = new Llvm.Load(new IntType().toLlvmType(), "%" + result, new IntType().toLlvmType(), "%" + name1);
 
                 ret = new RetExpression(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "%" + result);
 
@@ -684,12 +670,6 @@ public class ASD {
         public RetVariable toIR() throws TypeException {
             String result = "%" + this.name;
             SymbolTable.Symbol var;
-
-            //TODO: modifier gestion des types
-            /*if((var = symTable.lookup(name)) != null) {
-                System.err.println("Erreur,'" + this.name + "' symbole inexistant en table des symboles.");
-                System.exit(0)
-            }*/
 
             Llvm.Instruction varInt = new Llvm.VarInt((new IntType()).toLlvmType(), result);
 
@@ -767,10 +747,11 @@ public class ASD {
         }
 
         public RetInstruction toIR() throws TypeException {
-            SymbolTable.VariableSymbol leftRet = (SymbolTable.VariableSymbol) symTable.lookup(left);
+            SymbolTable.VariableSymbol leftRet = (SymbolTable.VariableSymbol) scopeTable.lookup(left);
             RetInstruction ret = null;
             String result = "";
             Expression.RetExpression rightRet = right.toIR();
+            String name1 = leftRet.ident;
 
             if (leftRet != null) {
                 // We check if the types mismatches
@@ -778,8 +759,10 @@ public class ASD {
                     throw new TypeException("type mismatch: have " + leftRet.type + " and " + rightRet.type);
                 }
 
+                if(!scope.equals("main")) name1 += "1";
+
                 // new store instruction result = left := right
-                Llvm.Instruction aff = new Llvm.Aff(rightRet.type.toLlvmType(), rightRet.result, leftRet.type.toLlvmType(), "%" + leftRet.ident);
+                Llvm.Instruction aff = new Llvm.Aff(rightRet.type.toLlvmType(), rightRet.result, leftRet.type.toLlvmType(), "%" + name1);
 
                 ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), leftRet.type, result);
 
@@ -810,6 +793,11 @@ public class ASD {
 
         public RetInstruction toIR() throws TypeException {
             Expression.RetExpression cond = e.toIR();
+
+            // We check if the types mismatches
+            if (!cond.type.equals(new IntType())) {
+                throw new TypeException("type mismatch: have ");
+            }
 
             String result = Utils.newtmp();
             String iftrue = Utils.newlab("IF");
@@ -850,6 +838,11 @@ public class ASD {
 
         public RetInstruction toIR() throws TypeException {
             Expression.RetExpression cond = e.toIR();
+
+            // We check if the types mismatches
+            if (!cond.type.equals(new IntType())) {
+                throw new TypeException("type mismatch: have ");
+            }
 
             String result = Utils.newtmp();
             String iftrue = Utils.newlab("IF");
@@ -893,6 +886,11 @@ public class ASD {
         public RetInstruction toIR() throws TypeException {
             Expression.RetExpression cond = e.toIR();
 
+            // We check if the types mismatches
+            if (!cond.type.equals(new IntType())) {
+                throw new TypeException("type mismatch: have ");
+            }
+
             String result = Utils.newtmp();
             String loop = Utils.newlab("LOOP");
             String dO = Utils.newlab("DO");
@@ -915,6 +913,22 @@ public class ASD {
             ret.ir.appendCode(new Llvm.Label(done));
 
             return ret;
+        }
+    }
+
+    static public class Return extends Instruction {
+        Expression e;
+
+        public Return(Expression e) {
+            this.e = e;
+        }
+
+        public String pp() {
+            return "RETURN " + e.pp() + "\n";
+        }
+
+        public RetInstruction toIR() throws TypeException {
+            
         }
     }
 
