@@ -9,6 +9,7 @@ public class ASD {
     static SymbolTable symTable = new SymbolTable();
     static String scope = "main";
     static SymbolTable scopeTable = symTable;
+    static int level = 0;
 
     static public class Program {
         List<Prototype> p;
@@ -354,6 +355,72 @@ public class ASD {
         }
     }
 
+    static public class VoidFunction extends Function {
+        /**
+         * @var Bloc
+         */
+        Bloc b;
+
+        /**
+         * Default Constructor
+         */
+        private VoidFunction() {}
+
+        /**
+         * Constructor
+         */
+        public VoidFunction(String name, List<String> attrs, Bloc b) {
+            super(name, attrs);
+            this.b = b;
+        }
+
+        @Override
+        public String pp() {
+            String ret = "FUNC VOID " + super.name + " (";
+
+            return ret + "){\n" + "\n" + b.pp() + "\n}\n";
+        }
+
+        @Override
+        public RetFunction toIR() throws TypeException {
+            SymbolTable.FunctionSymbol sym = (SymbolTable.FunctionSymbol) symTable.lookup(super.name);
+
+            if(sym == null) {
+                System.err.println("Erreur, symbole aaaaa '" + super.name + "' non présent dans la table des symboles");
+                System.exit(0);
+            } else {
+                scopeTable = sym.arguments;
+            }
+
+            scope = super.name;
+
+            RetFunction retFun;
+            String result = "";
+
+            retFun = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), result);
+
+            Llvm.Instruction decl = new Llvm.Define((new VoidType()).toLlvmType(), "@" + super.name, super.attrs);
+            Llvm.Instruction entry = new Llvm.Label("entry");
+            Llvm.Instruction attrs = new Llvm.Attrs(this.attrs);
+            Llvm.Instruction ret = new Llvm.Return((new VoidType()).toLlvmType(), "");
+            Llvm.Instruction end = new Llvm.EndFunction();
+
+            retFun.ir.appendCode(decl);
+            retFun.ir.appendCode(entry);
+            retFun.ir.appendCode(attrs);
+
+            Instruction.RetInstruction retIns = b.toIR();
+
+            if(retIns != null) retFun.ir.append(retIns.ir);
+
+            retFun.ir.appendCode(ret);
+
+            retFun.ir.appendCode(end);
+
+            return retFun;
+        }
+    }
+
     static public class Bloc {
         Sequence s;
 
@@ -363,7 +430,12 @@ public class ASD {
 
         // Pretty-printer
         public String pp() {
-            return "{\n" + s.pp() + "}\n";
+            String ret = Utils.indent(level) + "{\n";
+            level++;
+            ret += s.pp();
+            level--;
+            ret += Utils.indent(level) + "}\n";
+            return ret;
         }
 
         // IR generation
@@ -668,6 +740,12 @@ public class ASD {
 
         public IntegerVariable(String name) {
             this.name = name;
+
+            if(name.equals("return")) {
+                System.out.println("return est un mot clé reservé");
+                System.exit(0);
+            }
+
             SymbolTable.Symbol sym = new SymbolTable.VariableSymbol(new IntType(), name);
             //On stocke la variable en table des symboles pour par la suite pouvoir travailler avec (affectation, calcul sur des exprs, etc.)
             if (!symTable.add(sym)) System.err.println(name + ": symbole déjà existant");
@@ -753,7 +831,7 @@ public class ASD {
         }
 
         public String pp() {
-            return left + " := " + right.pp();
+            return Utils.indent(level) + left + " := " + right.pp();
         }
 
         public RetInstruction toIR() throws TypeException {
@@ -798,7 +876,7 @@ public class ASD {
         }
 
         public String pp() {
-            return "IF " + e.pp() + "\nTHEN\n" + b.pp() + "FI";
+            return Utils.indent(level) + "IF " + e.pp() + "\n"+ Utils.indent(level) +"THEN\n" + b.pp() + Utils.indent(level) + "FI";
         }
 
         public RetInstruction toIR() throws TypeException {
@@ -843,7 +921,7 @@ public class ASD {
         }
 
         public String pp() {
-            return "IF " + e.pp() + "\nTHEN\n" + b1.pp() + "\nELSE\n" + b2.pp() + "FI";
+            return Utils.indent(level) + "IF " + e.pp() + "\n" + Utils.indent(level) + "THEN\n" + b1.pp() + "\n" + Utils.indent(level) + "ELSE\n" + b2.pp() + Utils.indent(level) + "FI";
         }
 
         public RetInstruction toIR() throws TypeException {
@@ -890,7 +968,7 @@ public class ASD {
         }
 
         public String pp() {
-            return "WHILE " + e.pp() + " \nDO\n " + b.pp() + " DONE\n";
+            return Utils.indent(level) + "WHILE " + e.pp() + " \n" + Utils.indent(level) + "DO\n " + b.pp() + Utils.indent(level) + " DONE\n";
         }
 
         public RetInstruction toIR() throws TypeException {
@@ -942,11 +1020,16 @@ public class ASD {
 
         @Override
         public String pp() {
-            return "RETURN " + this.e.pp() + "\n";
+            return Utils.indent(level) + "RETURN " + this.e.pp() + "\n";
         }
 
         @Override
         public RetInstruction toIR() throws TypeException {
+            if(scopeTable.lookup("return") == null) {
+                System.err.println("Warning: fonction de type void");
+                return new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new VoidType(), "");
+            }
+
             Expression.RetExpression retr = this.e.toIR();
             RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "return");
 
@@ -962,6 +1045,24 @@ public class ASD {
             return ret;
         }
     }
+
+    /*static public abstract class Appel {
+        String nom;
+        List<Expression> expressions;
+
+        public Appel(String nom, List<Expression> expressions) {
+            this.nom = nom;
+            this.expressions
+        }
+    }
+
+    static public class AppelInt extends Appel {
+
+    }
+
+    static public class AppelVoid extends Appel {
+
+    }*/
 
     // Warning: this is the type from VSL+, not the LLVM types!
     static public abstract class Type {
