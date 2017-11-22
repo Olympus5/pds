@@ -32,12 +32,28 @@ ret i32 0
 
 define i32 @fact(i32 %n){
 entry: 
+%return = alloca i32
 %n1 = alloca i32
 store i32 %n, i32* %n1
-%n3 = load i32, i32* %n1
-%tmp5 = sub i32 32, %n3
-store i32 %tmp5, i32* %n1
-ret i32 0
+%n4 = load i32, i32* %n1
+%tmp5 = sub i32 %n4, 17
+%tmp6 = icmp ne i32 %tmp5, 0
+br i1 %tmp6, label %IF4, label %ELSE5
+IF4: 
+%n5 = load i32, i32* %n1
+%tmp7 = sub i32 32, %n5
+store i32 %tmp7, i32* %n1
+br label %FI6
+ELSE5: 
+%n6 = load i32, i32* %n1
+%tmp8 = add i32 %n6, 43
+store i32 %tmp8, i32* %n1
+br label %FI6
+FI6: 
+%n7 = load i32, i32* %n1
+store i32 %n7, i32* %return
+%return3 = load i32, i32* %return
+ret i32 %return3
 }
 
 

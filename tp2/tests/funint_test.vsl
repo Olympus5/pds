@@ -13,5 +13,12 @@ FUNC INT main() {
 }
 
 FUNC INT fact(n) {
-    n := 32 - n
+    IF n - 17
+    THEN
+        n := 32 - n
+    ELSE
+        n := n + 43
+    FI
+
+    RETURN n
 }

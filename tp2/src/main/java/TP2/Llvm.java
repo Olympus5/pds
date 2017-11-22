@@ -330,6 +330,7 @@ public class Llvm {
                   ret += ", " + new IntType().toString() + " %" + it.next();
               }
           }
+
           return ret + "){\n";
       }
   }
@@ -354,7 +355,9 @@ public class Llvm {
   }
 
   static public class EndFunction extends Instruction {
-      public EndFunction() {}
+
+      public EndFunction() {
+      }
 
       public String toString() {
           return "}\n\n";

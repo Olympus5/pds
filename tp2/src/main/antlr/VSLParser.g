@@ -24,7 +24,7 @@ prototype returns [List<ASD.Prototype> out] locals [List<String> attr, String no
 function returns [List<ASD.Function> out] locals [List<String> attr, String nom]
   : {$out = new ArrayList<ASD.Function>(); }
     ( { $attr = new ArrayList<String>(); } (FUNC INT MAIN LP RP LBB v=variable b=bloc RBB { $out.add(new ASD.MainFunction($MAIN.text, $attr, $v.out, $b.out)); }
-  | FUNC INT IDENT {$nom = $IDENT.text; } LP ((IDENT { System.err.println($attr != null); $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP LBB b=bloc RBB { $out.add(new ASD.IntFunction($nom, $attr, $b.out)); }))+
+  | FUNC INT IDENT {$nom = $IDENT.text; } LP ((IDENT { $attr.add($IDENT.text); }) (COMMA IDENT { $attr.add($IDENT.text); })*)? RP LBB b=bloc RBB { $out.add(new ASD.IntFunction($nom, $attr, $b.out)); }))+
   /*| FUNC VOID IDENT LP RP b=bloc { $out = new VoidFunction($IDENT.text, $b.out); }*/
   ;
 
@@ -66,5 +66,6 @@ instruction returns [List<ASD.Instruction> out]
 	: { $out = new ArrayList<ASD.Instruction>(); }(IDENT AFF e=expression { $out.add(new ASD.AffInstruction($IDENT.text, $e.out)); }
   | IF e=expression THEN b=bloc ENDIF { $out.add(new ASD.IfInstruction($e.out, $b.out)); }
   | IF e=expression THEN b1=bloc ELSE b2=bloc ENDIF { $out.add(new ASD.IfElseInstruction($e.out, $b1.out, $b2.out)); }
-  | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); })*
+  | WHILE e=expression DO b=bloc DONE { $out.add(new ASD.WhileInstruction($e.out, $b.out)); }
+  | RETURN e=expression { $out.add(new ASD.ReturnInstruction($e.out)); })*
   ;

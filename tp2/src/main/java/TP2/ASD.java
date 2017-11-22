@@ -1,6 +1,5 @@
 package TP2;
 
-import com.sun.org.apache.bcel.internal.generic.Instruction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -65,7 +64,9 @@ public class ASD {
             SymbolTable paramTable = new SymbolTable(symTable);
 
             for(String attr : super.attrs) {
-                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + "(attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + " (attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr + "1"))) System.err.println(attr + "1 (attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), "return"))) System.err.println("return: symbole déjà existant");
             }
 
             SymbolTable.Symbol sym = new SymbolTable.FunctionSymbol(new IntType(), name, paramTable, true);//TODO: Ajouter les arguments
@@ -98,8 +99,8 @@ public class ASD {
 
             int i = 0;
             for(String attr : super.attrs) {
-                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + "(attr): symbole déjà existant");
-                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr + "1"))) System.err.println(attr + "(attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr))) System.err.println(attr + " (attr): symbole déjà existant");
+                if(!paramTable.add(new SymbolTable.VariableSymbol(new IntType(), attr + "1"))) System.err.println(attr + "1 (attr): symbole déjà existant");
             }
 
             SymbolTable.Symbol sym = new SymbolTable.FunctionSymbol(new VoidType(), name, paramTable, true);//TODO: Ajouter les arguments
@@ -318,24 +319,33 @@ public class ASD {
 
             RetFunction retFun;
             String result = "";
+            String returN = Utils.newglob("return");
+
+            if(symTable.lookup(returN) != null) {
+                System.err.println("Erreur, return est un mot reservé");
+                System.exit(0);
+            }
 
             retFun = new RetFunction((new Llvm.IR(Llvm.empty(), Llvm.empty())), new IntType(), result);
 
             Llvm.Instruction decl = new Llvm.Define((new IntType()).toLlvmType(), "@" + this.name, this.attrs);
             Llvm.Instruction entry = new Llvm.Label("entry");
+            Llvm.Instruction returnVar = new Llvm.VarInt(new IntType().toLlvmType(), "%return");
             Llvm.Instruction attrs = new Llvm.Attrs(this.attrs);
+            Llvm.Instruction returnLoad = new Llvm.Load(new IntType().toLlvmType(), "%" + returN, new IntType().toLlvmType(), "%return");
+            Llvm.Instruction ret = new Llvm.Return((new IntType()).toLlvmType(), "%" + returN);
             Llvm.Instruction end = new Llvm.EndFunction();
 
             retFun.ir.appendCode(decl);
             retFun.ir.appendCode(entry);
+            retFun.ir.appendCode(returnVar);
             retFun.ir.appendCode(attrs);
 
             Instruction.RetInstruction retIns = b.toIR();
 
             if(retIns != null) retFun.ir.append(retIns.ir);
 
-            Llvm.Instruction ret = new Llvm.Return((new IntType()).toLlvmType(), "0");
-
+            retFun.ir.appendCode(returnLoad);
             retFun.ir.appendCode(ret);
 
             retFun.ir.appendCode(end);
@@ -916,19 +926,40 @@ public class ASD {
         }
     }
 
-    static public class Return extends Instruction {
+    /**
+     * Object representation of the instruction RETURN
+     */
+    static public class ReturnInstruction extends Instruction {
         Expression e;
 
-        public Return(Expression e) {
+        /**
+         * Constructor
+         * @param e the expression which must be returned
+         */
+        public ReturnInstruction(Expression e) {
             this.e = e;
         }
 
+        @Override
         public String pp() {
-            return "RETURN " + e.pp() + "\n";
+            return "RETURN " + this.e.pp() + "\n";
         }
 
+        @Override
         public RetInstruction toIR() throws TypeException {
-            
+            Expression.RetExpression retr = this.e.toIR();
+            RetInstruction ret = new RetInstruction(new Llvm.IR(Llvm.empty(), Llvm.empty()), new IntType(), "return");
+
+            if(!ret.type.equals(retr.type)) {
+                throw new TypeException("type mismatch: have ");
+            }
+
+            Llvm.Instruction aff = new Llvm.Aff(retr.type.toLlvmType(), retr.result, ret.type.toLlvmType(), "%" + ret.result);
+
+            ret.ir.append(retr.ir);
+            ret.ir.appendCode(aff);
+
+            return ret;
         }
     }
 
